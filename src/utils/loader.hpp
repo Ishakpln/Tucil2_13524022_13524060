@@ -5,9 +5,11 @@
 
 #include <string>
 
+using namespace std;
+
 class MeshLoader {
 public:
-    static bool loadOBJ(const std::string& filepath, Mesh& mesh);
+    static bool loadOBJ(const string& path, Mesh& mesh);
 };
 
 #endif
