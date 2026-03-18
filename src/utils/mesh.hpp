@@ -5,30 +5,19 @@
 
 using namespace std;
 
-class Vector3 {
-public:
-    float x;
-    float y;
-    float z;
-
-    Vector3();
-    Vector3(float x, float y, float z);
+struct Vector3{
+    float x{0.0f}, y{0.0f}, z{0.0f};
 };
 
-class Vertex {
-public:
-    float x;
-    float y;
-    float z;
-
-    Vertex();
-    Vertex(float x, float y, float z);
+struct Vertex {
+    Vector3 positions{};
 };
 
 class Face {
-public:
+private:
     vector<int> vertexIndices;
 
+public:
     Face();
     explicit Face(const vector<int>& vertexIndices);
 
@@ -36,20 +25,33 @@ public:
     bool isValid() const;
 };
 
+struct AABB{
+    Vector3 min{};
+    Vector3 max{};
+};
+
 class Mesh {
-public:
+private:
     vector<Vertex> vertices;
     vector<Face> faces;
     Vector3 origin;
-    float sideLength;
+    AABB boundingBox;
 
+    void updateOrigin();
+    void updateAABB();
+
+public:
     Mesh();
+    Mesh(const vector<Vertex>& l_vertices, const vector<Face>& l_faces);
     void clear();
     void addVertex(const Vertex& vertex);
     void addFace(const Face& face);
+    void updateMesh();
+    vector<Vertex> getVertices() const;
+    vector<Face> getFaces() const;
+    Vector3 getOrigin() const;
+    AABB getBoundingBox() const;
 
-private:
-    void updateOrigin();
 };
 
 #endif

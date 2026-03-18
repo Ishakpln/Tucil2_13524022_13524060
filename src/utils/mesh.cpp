@@ -1,18 +1,6 @@
 #include "mesh.hpp"
-
 #include <algorithm>
 
-using namespace std;
-
-Vector3::Vector3() : x(0.0f), y(0.0f), z(0.0f) {}
-
-Vector3::Vector3(float xVal, float yVal, float zVal)
-    : x(xVal), y(yVal), z(zVal) {}
-
-Vertex::Vertex() : x(0.0f), y(0.0f), z(0.0f) {}
-
-Vertex::Vertex(float xVal, float yVal, float zVal)
-    : x(xVal), y(yVal), z(zVal) {}
 
 Face::Face() {};
 Face::Face(const vector<int>& indices) : vertexIndices(indices) {}
@@ -30,55 +18,78 @@ bool Face::isValid() const {
     }
 }
 
-Mesh::Mesh() : origin(), sideLength(0.0f) {}
+Mesh::Mesh() : origin(Vector3{}), boundingBox(AABB{}) {}
+Mesh::Mesh(const vector<Vertex>& l_vertices, const vector<Face>& l_faces) {
+    for(int i = 0; i < l_vertices.size(); i++){
+        addVertex(l_vertices[i]);
+    }
+    for(int i = 0; i < l_faces.size(); i++){
+        addFace(l_faces[i]);
+    }
+    updateMesh();
+}
+
 
 void Mesh::clear() {
     vertices.clear();
     faces.clear();
-    origin = Vector3();
-    sideLength = 0.0f;
+    origin = Vector3{};
+    boundingBox = AABB{};
 }
 
 void Mesh::addVertex(const Vertex& vertex) {
     vertices.push_back(vertex);
-    updateOrigin();
 }
 
 void Mesh::addFace(const Face& face) {
     faces.push_back(face);
 }
 
+vector<Vertex> Mesh::getVertices() const {return vertices;}
+vector<Face> Mesh::getFaces() const{return faces;}
+Vector3 Mesh::getOrigin() const{return origin;} 
+AABB Mesh::getBoundingBox() const {return boundingBox;}
+
 void Mesh::updateOrigin() {
     if (vertices.empty()) {
-        origin = Vector3();
+        origin = Vector3{};
         return;
     }
 
-    float minX = vertices[0].x;
-    float minY = vertices[0].y;
-    float minZ = vertices[0].z;
-    float maxX = vertices[0].x;
-    float maxY = vertices[0].y;
-    float maxZ = vertices[0].z;
+
+    float dx = boundingBox.max.x - boundingBox.min.x;
+    float dy = boundingBox.max.y - boundingBox.min.y;
+    float dz = boundingBox.max.z - boundingBox.min.z;
+
+    float centerX = (boundingBox.max.x + boundingBox.min.x) / 2.0f;
+    float centerY = (boundingBox.max.y + boundingBox.min.y) / 2.0f;
+    float centerZ = (boundingBox.max.z + boundingBox.min.z) / 2.0f;
+    float halfSideX = dx / 2.0f;
+    float halfSideY = dy / 2.0f;
+    float halfSideZ = dz / 2.0f;
+
+    origin = Vector3{centerX, centerY, centerZ};
+}
+
+void Mesh::updateAABB() {
+    boundingBox.min.x = vertices[0].positions.x;
+    boundingBox.min.y = vertices[0].positions.y;
+    boundingBox.min.z = vertices[0].positions.z;
+    boundingBox.max.x = vertices[0].positions.x;
+    boundingBox.max.y = vertices[0].positions.y;
+    boundingBox.max.z = vertices[0].positions.z;
 
     for (size_t i = 1; i < vertices.size(); i++) {
-        minX = min(minX, vertices[i].x);
-        minY = min(minY, vertices[i].y);
-        minZ = min(minZ, vertices[i].z);
-        maxX = max(maxX, vertices[i].x);
-        maxY = max(maxY, vertices[i].y);
-        maxZ = max(maxZ, vertices[i].z);
+        boundingBox.min.x = min(boundingBox.min.x, vertices[i].positions.x);
+        boundingBox.min.y = min(boundingBox.min.y, vertices[i].positions.y);
+        boundingBox.min.z = min(boundingBox.min.z, vertices[i].positions.z);
+        boundingBox.max.x = max(boundingBox.max.x, vertices[i].positions.x);
+        boundingBox.max.y = max(boundingBox.max.y, vertices[i].positions.y);
+        boundingBox.max.z = max(boundingBox.max.z, vertices[i].positions.z);
     }
+}
 
-    float dx = maxX - minX;
-    float dy = maxY - minY;
-    float dz = maxZ - minZ;
-    sideLength = max(dx, max(dy, dz));
-
-    float cX = (minX + maxX) / 2.0f;
-    float centerY = (minY + maxY) / 2.0f;
-    float centerZ = (minZ + maxZ) / 2.0f;
-    float hSide = sideLength / 2.0f;
-
-    origin = Vector3(cX - hSide, centerY - hSide, centerZ - hSide);
+void Mesh::updateMesh() {
+    updateOrigin();
+    updateAABB();
 }
