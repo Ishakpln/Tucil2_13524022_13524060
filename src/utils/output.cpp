@@ -5,10 +5,12 @@
 
 using namespace std;
 
+namespace {
+
 string buildOutputFilename(const string& path) {
     string filename = path;
 
-    size_t lastSlash = filename.find_last_of("/\\");
+    size_t lastSlash = filename.find_last_of("\\/");
     if (lastSlash != string::npos) {
         filename = filename.substr(lastSlash + 1);
     }
@@ -22,19 +24,23 @@ string buildOutputFilename(const string& path) {
 }
 
 bool isValidMeshForOutput(const Mesh& mesh) {
-    for (size_t i = 0; i < mesh.faces.size(); i++) {
-        const Face& face = mesh.faces[i];
+    const vector<Face>& faces = mesh.getFaces();
+    const vector<Vertex>& vertices = mesh.getVertices();
+
+    for (size_t i = 0; i < faces.size(); i++) {
+        const Face& face = faces[i];
+        const vector<int>& vertexIndices = face.getVertexIndices();
 
         if (!face.isValid()) {
             return false;
         }
 
-        for (size_t j = 0; j < face.vertexIndices.size(); j++) {
-            int vertexIndex = face.vertexIndices[j];
-            int countVertex = mesh.vertices.size();
+        for (size_t j = 0; j < vertexIndices.size(); j++) {
+            int vertexIndex = vertexIndices[j];
+            int countVertex = static_cast<int>(vertices.size());
 
             if (vertexIndex < 0 || vertexIndex >= countVertex) {
-                return false;   
+                return false;
             }
         }
     }
@@ -42,6 +48,7 @@ bool isValidMeshForOutput(const Mesh& mesh) {
     return true;
 }
 
+}
 
 bool MeshOutput::saveOBJ(const Mesh& mesh, const string& filename) {
     if (!isValidMeshForOutput(mesh)) {
@@ -49,24 +56,28 @@ bool MeshOutput::saveOBJ(const Mesh& mesh, const string& filename) {
         return false;
     }
 
+    const vector<Vertex>& vertices = mesh.getVertices();
+    const vector<Face>& faces = mesh.getFaces();
     const string outputPath = "test/" + buildOutputFilename(filename);
+
     ofstream file(outputPath);
     if (!file.is_open()) {
         cerr << "Failed to open output OBJ file: " << outputPath << "\n";
         return false;
     }
 
-    for (size_t i = 0; i < mesh.vertices.size(); i++) {
-        const Vertex& vertex = mesh.vertices[i];
-        file << "v " << vertex.x << " " << vertex.y << " " << vertex.z << "\n";
+    for (size_t i = 0; i < vertices.size(); i++) {
+        const Vertex& vertex = vertices[i];
+        file << "v " << vertex.positions.x << " " << vertex.positions.y << " " << vertex.positions.z << "\n";
     }
 
-    for (size_t i = 0; i < mesh.faces.size(); i++) {
-        const Face& face = mesh.faces[i];
+    for (size_t i = 0; i < faces.size(); i++) {
+        const Face& face = faces[i];
+        const vector<int>& vertexIndices = face.getVertexIndices();
         file << "f";
 
-        for (size_t j = 0; j < face.vertexIndices.size(); j++) {
-            file << " " << (face.vertexIndices[j] + 1);
+        for (size_t j = 0; j < vertexIndices.size(); j++) {
+            file << " " << (vertexIndices[j] + 1);
         }
 
         file << "\n";

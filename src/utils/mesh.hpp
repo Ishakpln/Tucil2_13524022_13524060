@@ -11,7 +11,7 @@ struct Vector3{
 
 struct Vertex {
     Vector3 positions{};
-};
+};  
 
 class Face {
 private:
@@ -22,6 +22,7 @@ public:
     explicit Face(const vector<int>& vertexIndices);
 
     void addVertexIndex(int vertexIndex);
+    const vector<int>& getVertexIndices() const;
     bool isValid() const;
 };
 

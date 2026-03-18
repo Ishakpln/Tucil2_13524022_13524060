@@ -83,7 +83,7 @@ bool MeshLoader::loadOBJ(const string& path, Mesh& mesh) {
 
         if (prefix == "v") {
             Vertex v;
-            if (!(iss >> v.x >> v.y >> v.z)) {
+            if (!(iss >> v.positions.x >> v.positions.y >> v.positions.z)) {
                 cerr << "not valid\n";
                 return false;
             }
@@ -100,7 +100,7 @@ bool MeshLoader::loadOBJ(const string& path, Mesh& mesh) {
                     return false;
                 }
 
-                if (vertexIndex < 0 || vertexIndex >= static_cast<int>(mesh.vertices.size())) {
+                if (vertexIndex < 0 || vertexIndex >= static_cast<int>(mesh.getVertices().size())) {
                     cerr << "not valid\n";
                     return false;
                 }

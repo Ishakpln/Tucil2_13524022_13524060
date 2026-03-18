@@ -9,6 +9,10 @@ void Face::addVertexIndex(int vertexIndex) {
     vertexIndices.push_back(vertexIndex);
 }
 
+const vector<int>& Face::getVertexIndices() const {
+    return vertexIndices;
+}
+
 bool Face::isValid() const {
     if (vertexIndices.size() >= 3) {
         return true;
