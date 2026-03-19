@@ -278,9 +278,9 @@ void recurseMeshing(Mesh& mesh, const OctreeNode& node) {
 
         mesh.addFace(Face({idx + 0, idx + 1, idx + 2, idx + 3}));
         mesh.addFace(Face({idx + 0, idx + 1, idx + 5, idx + 4}));
-        mesh.addFace(Face({idx + 1, idx + 2, idx + 7, idx + 5}));
+        mesh.addFace(Face({idx + 1, idx + 3, idx + 7, idx + 5}));
         mesh.addFace(Face({idx + 2, idx + 3, idx + 7, idx + 6}));
-        mesh.addFace(Face({idx + 0, idx + 2, idx + 6, idx + 5}));
+        mesh.addFace(Face({idx + 0, idx + 2, idx + 6, idx + 4}));
         mesh.addFace(Face({idx + 4, idx + 5, idx + 7, idx + 6}));
     } else {
         for (auto child : node.children) {
