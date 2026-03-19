@@ -2,12 +2,13 @@
 #define MESH_H
 
 #include <vector>
+#include <stack>
+#include "geometry.hpp"
 
 using namespace std;
 
-struct Vector3{
-    float x{0.0f}, y{0.0f}, z{0.0f};
-};
+class Octree;
+struct OctreeNode;
 
 struct Vertex {
     Vector3 positions{};
@@ -20,15 +21,22 @@ private:
 public:
     Face();
     explicit Face(const vector<int>& vertexIndices);
-
+    const vector<int>& getVertexIndices() const;
     void addVertexIndex(int vertexIndex);
     bool isValid() const;
 };
 
 struct AABB{
-    Vector3 min{};
-    Vector3 max{};
+    Vector3 minBound{};
+    Vector3 maxBound{};
+
+    AABB computeBoxAABB() const;
+    Vector3 center() const;
+    Vector3 halfSide() const;
+    bool aabbCollisionDetection(AABB& box);
 };
+
+AABB computeAABB(const vector<Vertex>& vertices);
 
 class Mesh {
 private:
@@ -47,11 +55,14 @@ public:
     void addVertex(const Vertex& vertex);
     void addFace(const Face& face);
     void updateMesh();
-    vector<Vertex> getVertices() const;
-    vector<Face> getFaces() const;
-    Vector3 getOrigin() const;
-    AABB getBoundingBox() const;
+    const vector<Vertex>& getVertices() const;
+    const vector<Face>& getFaces() const;
+    const Vector3& getOrigin() const;
+    const AABB& getBoundingBox() const;
 
 };
+
+bool triangleBoxOverlapTest(AABB box, vector<Vertex> triangle);
+Mesh voxelMeshing(const Octree& voxelized);
 
 #endif
