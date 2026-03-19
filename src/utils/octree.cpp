@@ -149,7 +149,8 @@ std::vector<Face> filterTrianglesInBox(const Mesh& mesh, const std::vector<Face>
             polygon.push_back(vertices[vertexIndex]);
         }
 
-        if (polygon.size() == 3 && triangleBoxOverlapTest(boundingCube, polygon)) {
+        assert(polygon.size() == 3 && "Jgn dihilangin, untuk skrg triangle dulu inputnya biar gampang debug");
+        if (triangleBoxOverlapTest(boundingCube, polygon)) {
             filteredFaces.push_back(face);
         }
     }
