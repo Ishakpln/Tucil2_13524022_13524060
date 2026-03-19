@@ -149,7 +149,7 @@ std::vector<Face> filterTrianglesInBox(const Mesh& mesh, const std::vector<Face>
             polygon.push_back(vertices[vertexIndex]);
         }
 
-        if (polygon.size() >= 3 && triangleBoxOverlapTest(boundingCube, polygon)) {
+        if (polygon.size() == 3 && triangleBoxOverlapTest(boundingCube, polygon)) {
             filteredFaces.push_back(face);
         }
     }
