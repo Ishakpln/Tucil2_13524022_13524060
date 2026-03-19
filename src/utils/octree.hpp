@@ -3,8 +3,6 @@
 #include <utility>
 #include <vector>
 
-#include "mesh.hpp"
-
 struct OctreeNode {
     ~OctreeNode();
 

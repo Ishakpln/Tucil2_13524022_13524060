@@ -1,5 +1,6 @@
+#include "mesh.hpp"
 #include "octree.hpp"
-
+#include <iostream>
 #include <cassert>
 
 namespace {
@@ -21,7 +22,8 @@ unsigned long long binPositivePow(unsigned long long base, int exponent) {
 Octree::Octree() : root(nullptr), maxDepth(0) {}
 
 Octree::Octree(int maxDepthValue, const AABB& bounds)
-    : root(createNode(bounds.computeBoxAABB())), maxDepth(maxDepthValue) {
+    : root(createNode(bounds)), maxDepth(maxDepthValue) {
+    root->cube = bounds.computeBoxAABB();
     countDepth.resize(maxDepth + 1, 0);
     if (root != nullptr) {
         countDepth[0] = 1;
@@ -55,7 +57,7 @@ std::vector<int> Octree::getCountDepth() const {
 
 OctreeNode* Octree::createNode(const AABB& bounds) {
     OctreeNode* newNode = new OctreeNode;
-    newNode->cube = bounds.computeBoxAABB();
+    newNode->cube = bounds;
     return newNode;
 }
 
@@ -134,7 +136,7 @@ AABB computeChildCube(const OctreeNode& parent, int idx) {
 }
 
 std::vector<Face> filterTrianglesInBox(const Mesh& mesh, const std::vector<Face>& subMesh, const AABB& boundingCube) {
-    std::vector<Face> filteredFaces;
+    std::vector<Face> filteredFaces{};
     if (subMesh.empty()) {
         return filteredFaces;
     }

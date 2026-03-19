@@ -1,16 +1,12 @@
 #include "mesh.hpp"
-
 #include "octree.hpp"
 
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <map>
+#include <string>
 
-namespace {
-
-void recurseMeshing(Mesh& mesh, const OctreeNode& node);
-
-}
 
 Face::Face() {}
 
@@ -94,8 +90,8 @@ AABB AABB::computeBoxAABB() const {
 
     float side = max(dx, max(dy, dz));
     Vector3 c = center();
-    Vector3 minCube{c.x - side / 2.0f - 0.1f, c.y - side / 2.0f - 0.1f, c.z - side / 2.0f - 0.1f};
-    Vector3 maxCube{c.x + side / 2.0f + 0.1f, c.y + side / 2.0f + 0.1f, c.z + side / 2.0f + 0.1f};
+    Vector3 minCube{c.x - side / 2.0f, c.y - side / 2.0f, c.z - side / 2.0f};
+    Vector3 maxCube{c.x + side / 2.0f, c.y + side / 2.0f, c.z + side / 2.0f};
     return AABB{minCube, maxCube};
 }
 
@@ -155,6 +151,8 @@ AABB computeAABB(const vector<Vertex>& vertices) {
     return boundingBox;
 }
 
+constexpr float EPSILON = 1e-6f;
+
 bool triangleBoxOverlapTest(AABB box, vector<Vertex> triangle) {
     assert(triangle.size() == 3 && "Vector of vertices has length not 3(not triangle)");
 
@@ -177,95 +175,41 @@ bool triangleBoxOverlapTest(AABB box, vector<Vertex> triangle) {
 
     float r = box.maxBound.x * std::abs(n.x) + box.maxBound.y * std::abs(n.y) + box.maxBound.z * std::abs(n.z);
     float s = dot(n, triangle[0].positions);
-    if (!(std::abs(s) <= r)) {
+    if (!(std::abs(s) <= r + EPSILON)) {
         return false;
     }
 
-    Vector3 a{0.0f, -f0.z, f0.y};
-    float p0 = dot(a, triangle[0].positions);
-    float p2 = dot(a, triangle[2].positions);
-    r = box.maxBound.y * std::abs(a.y) + box.maxBound.z * std::abs(a.z);
-    if (min(p0, p2) > r || max(p0, p2) < -r) {
-        return false;
-    }
+    auto isSeparatedOnAxis = [&](const Vector3& axis) {
+        float p0 = dot(axis, triangle[0].positions);
+        float p1 = dot(axis, triangle[1].positions);
+        float p2 = dot(axis, triangle[2].positions);
+        float pMin = std::min({p0, p1, p2});
+        float pMax = std::max({p0, p1, p2});
 
-    a = {0.0f, -f1.z, f1.y};
-    p0 = dot(a, triangle[0].positions);
-    p2 = dot(a, triangle[2].positions);
-    r = box.maxBound.y * std::abs(a.y) + box.maxBound.z * std::abs(a.z);
-    if (min(p0, p2) > r || max(p0, p2) < -r) {
-        return false;
-    }
+        float axisRadius = box.maxBound.x * std::abs(axis.x)
+                         + box.maxBound.y * std::abs(axis.y)
+                         + box.maxBound.z * std::abs(axis.z);
 
-    a = {0.0f, -f2.z, f2.y};
-    p0 = dot(a, triangle[0].positions);
-    p2 = dot(a, triangle[2].positions);
-    r = box.maxBound.y * std::abs(a.y) + box.maxBound.z * std::abs(a.z);
-    if (min(p0, p2) > r || max(p0, p2) < -r) {
-        return false;
-    }
+        return (pMin > axisRadius + EPSILON) || (pMax < -axisRadius - EPSILON);
+    };
 
-    a = {f0.z, 0.0f, -f0.x};
-    p0 = dot(a, triangle[0].positions);
-    p2 = dot(a, triangle[2].positions);
-    r = box.maxBound.x * std::abs(a.x) + box.maxBound.z * std::abs(a.z);
-    if (min(p0, p2) > r || max(p0, p2) < -r) {
-        return false;
-    }
+    if (isSeparatedOnAxis(Vector3{0.0f, -f0.z, f0.y})) return false;
+    if (isSeparatedOnAxis(Vector3{0.0f, -f1.z, f1.y})) return false;
+    if (isSeparatedOnAxis(Vector3{0.0f, -f2.z, f2.y})) return false;
 
-    a = {f1.z, 0.0f, -f1.x};
-    p0 = dot(a, triangle[0].positions);
-    p2 = dot(a, triangle[2].positions);
-    r = box.maxBound.x * std::abs(a.x) + box.maxBound.z * std::abs(a.z);
-    if (min(p0, p2) > r || max(p0, p2) < -r) {
-        return false;
-    }
+    if (isSeparatedOnAxis(Vector3{f0.z, 0.0f, -f0.x})) return false;
+    if (isSeparatedOnAxis(Vector3{f1.z, 0.0f, -f1.x})) return false;
+    if (isSeparatedOnAxis(Vector3{f2.z, 0.0f, -f2.x})) return false;
 
-    a = {f2.z, 0.0f, -f2.x};
-    p0 = dot(a, triangle[0].positions);
-    p2 = dot(a, triangle[2].positions);
-    r = box.maxBound.x * std::abs(a.x) + box.maxBound.z * std::abs(a.z);
-    if (min(p0, p2) > r || max(p0, p2) < -r) {
-        return false;
-    }
-
-    a = {-f0.y, f0.x, 0.0f};
-    p0 = dot(a, triangle[0].positions);
-    p2 = dot(a, triangle[2].positions);
-    r = box.maxBound.x * std::abs(a.x) + box.maxBound.y * std::abs(a.y);
-    if (min(p0, p2) > r || max(p0, p2) < -r) {
-        return false;
-    }
-
-    a = {-f1.y, f1.x, 0.0f};
-    p0 = dot(a, triangle[0].positions);
-    p2 = dot(a, triangle[2].positions);
-    r = box.maxBound.x * std::abs(a.x) + box.maxBound.y * std::abs(a.y);
-    if (min(p0, p2) > r || max(p0, p2) < -r) {
-        return false;
-    }
-
-    a = {-f2.y, f2.x, 0.0f};
-    p0 = dot(a, triangle[0].positions);
-    p2 = dot(a, triangle[2].positions);
-    r = box.maxBound.x * std::abs(a.x) + box.maxBound.y * std::abs(a.y);
-    if (min(p0, p2) > r || max(p0, p2) < -r) {
-        return false;
-    }
+    if (isSeparatedOnAxis(Vector3{-f0.y, f0.x, 0.0f})) return false;
+    if (isSeparatedOnAxis(Vector3{-f1.y, f1.x, 0.0f})) return false;
+    if (isSeparatedOnAxis(Vector3{-f2.y, f2.x, 0.0f})) return false;
 
     return true;
 }
 
-Mesh voxelMeshing(const Octree& voxelized) {
-    Mesh vMesh;
-    recurseMeshing(vMesh, voxelized.getRoot());
-    return vMesh;
-}
-
-namespace {
-
-void recurseMeshing(Mesh& mesh, const OctreeNode& node) {
-    if (node.isLeaf() && node.isFilled) {
+static void recurseMeshing(Mesh& mesh, const OctreeNode& node) {
+    if (node.isLeaf() && node.isFilled) {       
         int idx = static_cast<int>(mesh.getVertices().size());
         mesh.addVertex({node.cube.minBound});
         mesh.addVertex({Vector3{node.cube.maxBound.x, node.cube.minBound.y, node.cube.minBound.z}});
@@ -289,4 +233,9 @@ void recurseMeshing(Mesh& mesh, const OctreeNode& node) {
     }
 }
 
+Mesh voxelMeshing(const Octree& voxelized) {
+    Mesh vMesh;
+    recurseMeshing(vMesh, voxelized.getRoot());
+    return vMesh;
 }
+
