@@ -1,153 +1,158 @@
 #include "octree.hpp"
-#include "Mesh.hpp"
-#include <queue>
+
 #include <cassert>
 
-Octree::Octree() : root(nullptr), maxDepth(0) {}
-Octree::Octree(int maxDepth, const AABB& bounds) 
-: root(createNode(bounds.computeBoxAABB())), maxDepth(maxDepth) {
-    countDepth.resize(maxDepth+1, 0);
-}
+namespace {
 
-Octree::~Octree(){
-    if(root != nullptr){
-        delete root;
-    }
-}
-
-OctreeNode::~OctreeNode(){
-    if(!children.empty()){
-        for(auto child : children){
-            if(child.second != nullptr){
-                delete child.second;
-            }
+unsigned long long binPositivePow(unsigned long long base, int exponent) {
+    unsigned long long result = 1;
+    while (exponent > 0) {
+        if ((exponent & 1) != 0) {
+            result *= base;
         }
+        base *= base;
+        exponent >>= 1;
+    }
+    return result;
+}
+
+}
+
+Octree::Octree() : root(nullptr), maxDepth(0) {}
+
+Octree::Octree(int maxDepthValue, const AABB& bounds)
+    : root(createNode(bounds.computeBoxAABB())), maxDepth(maxDepthValue) {
+    countDepth.resize(maxDepth + 1, 0);
+    if (root != nullptr) {
+        countDepth[0] = 1;
+        root->isFilled = true;
     }
 }
 
-const OctreeNode& Octree::getRoot() const{return *root;}
-const int& Octree::getMaxDepth() const {return maxDepth;}
-const vector<int>& Octree::getCountDepth() const {return countDepth;}
+Octree::~Octree() {
+    delete root;
+    root = nullptr;
+}
 
-OctreeNode* Octree::createNode(const AABB& bounds){
+OctreeNode::~OctreeNode() {
+    for (auto& child : children) {
+        delete child.second;
+        child.second = nullptr;
+    }
+}
+
+const OctreeNode& Octree::getRoot() const {
+    return *root;
+}
+
+const int& Octree::getMaxDepth() const {
+    return maxDepth;
+}
+
+std::vector<int> Octree::getCountDepth() const {
+    return countDepth;
+}
+
+OctreeNode* Octree::createNode(const AABB& bounds) {
     OctreeNode* newNode = new OctreeNode;
     newNode->cube = bounds.computeBoxAABB();
     return newNode;
 }
-void Octree::addChild(OctreeNode* parent, OctreeNode& child, int idx){
-    assert((idx <= 7 && idx >= 0) && "Octant id is not in range from 0-7");
+
+void Octree::addChild(OctreeNode* parent, OctreeNode& child, int idx) {
+    assert(idx >= 0 && idx <= 7 && "Octant id is not in range from 0-7");
+    assert(parent != nullptr && "Parent node cannot be null");
     assert(parent->children.size() < 8 && "Parent node has more than 8 children nodes");
+
     child.depth = parent->depth + 1;
-    pair<int, OctreeNode*> id_child{idx, &child};
-    parent->children.push_back(id_child);
-    countDepth[child.depth]++;
+    parent->children.push_back({idx, &child});
+    if (child.depth >= 0 && child.depth < static_cast<int>(countDepth.size())) {
+        countDepth[child.depth]++;
+    }
 }
 
-vector<int> Octree::amountOfNodsePrunedDepthN(){
-    vector<int> prunedCountDepth(maxDepth);
-    for(int i = 0; i < maxDepth; i++){
-        prunedCountDepth.push_back(binPositivePow(8, i) - countDepth[i]);
+std::vector<int> Octree::amountOfNodsePrunedDepthN() const {
+    std::vector<int> prunedCountDepth;
+    prunedCountDepth.reserve(maxDepth + 1);
+
+    for (int i = 0; i <= maxDepth; i++) {
+        unsigned long long fullCount = binPositivePow(8ull, i);
+        int currentCount = (i < static_cast<int>(countDepth.size())) ? countDepth[i] : 0;
+        prunedCountDepth.push_back(static_cast<int>(fullCount) - currentCount);
     }
+
     return prunedCountDepth;
 }
 
-void Octree::subdivide(OctreeNode* parent, const Mesh& mesh, vector<Face> subMesh, int depth){
-    if(depth > maxDepth) return;
+void Octree::subdivide(OctreeNode* parent, const Mesh& mesh, const std::vector<Face>& subMesh, int depth) {
+    if (parent == nullptr || depth >= maxDepth) {
+        return;
+    }
 
-    if(filterTrianglesInBox(mesh, mesh.getFaces(), parent->cube).empty()){
+    std::vector<Face> currentFaces = filterTrianglesInBox(mesh, subMesh, parent->cube);
+    if (currentFaces.empty()) {
         parent->isFilled = false;
-    }else{
-        for(int i = 0; i < 8; i++){
-            AABB childCube{computeChildCube(*parent, i)};
-            vector<Face> subFaces{filterTrianglesInBox(mesh, subMesh, childCube)};
-            if(!subFaces.empty()){
-                OctreeNode* childNode = createNode(childCube);
-                addChild(parent, *childNode, i);
-                childNode->isFilled = true;
-                subdivide(childNode, mesh, subFaces, depth + 1);
-            }
+        return;
+    }
+
+    parent->isFilled = true;
+
+    for (int i = 0; i < 8; i++) {
+        AABB childCube = computeChildCube(*parent, i);
+        std::vector<Face> subFaces = filterTrianglesInBox(mesh, currentFaces, childCube);
+        if (!subFaces.empty()) {
+            OctreeNode* childNode = createNode(childCube);
+            childNode->isFilled = true;
+            addChild(parent, *childNode, i);
+            subdivide(childNode, mesh, subFaces, depth + 1);
         }
     }
 }
 
-AABB computeChildCube(const OctreeNode& parent, int idx){
-    const Vector3& min{parent.cube.minBound};
-    const Vector3& max{parent.cube.maxBound};
-    Vector3 center{(parent.cube.maxBound.x + parent.cube.minBound.x)/2,
-                   (parent.cube.maxBound.y + parent.cube.minBound.y)/2,
-                   (parent.cube.maxBound.z + parent.cube.minBound.z)/2};
+AABB computeChildCube(const OctreeNode& parent, int idx) {
+    const Vector3& minBound = parent.cube.minBound;
+    const Vector3& maxBound = parent.cube.maxBound;
+    Vector3 center = parent.cube.center();
 
-    switch(idx){
-        case 0:
-            Vector3 minBB{min};
-            Vector3 maxBB{center};
-            return AABB {minBB, maxBB};
-            break;
-        case 1:
-            Vector3 minBB{center.x, min.y, min.z};
-            Vector3 maxBB{max.x, center.y, center.z};
-            return AABB {minBB, maxBB};
-            break;
-        case 2:
-            Vector3 minBB{min.x, min.y, center.z};
-            Vector3 maxBB{center.x, center.y, max.z};
-            return AABB {minBB, maxBB};
-            break;
-        case 3:
-            Vector3 minBB{center.x, min.y, center.z};
-            Vector3 maxBB{max.x, center.y, max.z};
-            return AABB {minBB, maxBB};
-            break;
-        case 4:
-            Vector3 minBB{min.x, center.y, min.z};
-            Vector3 maxBB{center.x, max.y, center.z};
-            return AABB {minBB, maxBB};
-            break;
-        case 5:
-            Vector3 minBB{center.x, center.y, min.z};
-            Vector3 maxBB{max.z, max.y, center.z};
-            return AABB {minBB, maxBB};
-            break;
-        case 6:
-            Vector3 minBB{min.x, center.y, center.z};
-            Vector3 maxBB{center.x, max.y, max.z};
-            return AABB {minBB, maxBB};
-            break;
-        case 7:
-            Vector3 minBB{center.x, center.y, center.z};
-            Vector3 maxBB{max.x, max.y, max.z};
-            return AABB {minBB, maxBB};
-            break;
+    Vector3 childMin = minBound;
+    Vector3 childMax = center;
+
+    if ((idx & 1) != 0) {
+        childMin.x = center.x;
+        childMax.x = maxBound.x;
     }
+    if ((idx & 2) != 0) {
+        childMin.z = center.z;
+        childMax.z = maxBound.z;
+    }
+    if ((idx & 4) != 0) {
+        childMin.y = center.y;
+        childMax.y = maxBound.y;
+    }
+
+    return AABB{childMin, childMax};
 }
 
-vector<Face> filterTrianglesInBox(const Mesh& mesh, vector<Face> subMesh, const AABB& boundingCube){
-    if(subMesh.empty()) return;
-    const vector<Vertex>& l_vertices{mesh.getVertices()};
-    vector<Face> l_sub_faces;
-    for (Face face : subMesh){
-        vector<Vertex> polygon;
-        for (int v_idx : face.getVertexIndices()){
-            polygon.push_back(l_vertices[v_idx]);
+std::vector<Face> filterTrianglesInBox(const Mesh& mesh, const std::vector<Face>& subMesh, const AABB& boundingCube) {
+    std::vector<Face> filteredFaces;
+    if (subMesh.empty()) {
+        return filteredFaces;
+    }
+
+    const std::vector<Vertex>& vertices = mesh.getVertices();
+    for (const Face& face : subMesh) {
+        std::vector<Vertex> polygon;
+        const std::vector<int>& indices = face.getVertexIndices();
+        polygon.reserve(indices.size());
+
+        for (int vertexIndex : indices) {
+            polygon.push_back(vertices[vertexIndex]);
         }
-        triangleBoxOverlapTest(boundingCube, polygon);
-    }
 
-    return l_sub_faces;
-}
-
-static long long unsigned int binPositivePow(int b, int n){
-    int res{1};
-    for(int i = n; i > 0; i/=2){
-        if(i % 2){
-            res *= b;
+        if (polygon.size() >= 3 && triangleBoxOverlapTest(boundingCube, polygon)) {
+            filteredFaces.push_back(face);
         }
-        b *= b;
     }
 
-    return res;
+    return filteredFaces;
 }
-
-
-
-
