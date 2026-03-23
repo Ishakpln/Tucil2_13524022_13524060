@@ -62,7 +62,7 @@ public:
     const AABB& getBoundingBox() const;
 };
 
-bool triangleBoxOverlapTest(AABB box, vector<Vertex> triangle);
+bool triangleBoxOverlapTest(AABB box, Vertex v0, Vertex v1, Vertex v2);
 Mesh voxelMeshing(const Octree& voxelized);
 
 #endif

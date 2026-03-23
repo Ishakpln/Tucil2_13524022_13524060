@@ -1,7 +1,7 @@
 #pragma once
 
-#include <utility>
 #include <vector>
+#include <thread>
 
 struct OctreeNode {
     ~OctreeNode();
@@ -20,6 +20,8 @@ private:
     int maxDepth;
     std::vector<int> countDepth;
 
+    void subdivide_recurse(OctreeNode& parent, const Mesh& mesh, const std::vector<Face>& subMesh, int depth);
+
 public:
     Octree();
     Octree(int maxDepth, const AABB& bounds);
@@ -31,7 +33,7 @@ public:
 
     OctreeNode* createNode(const AABB& bounds);
     void addChild(OctreeNode* parent, OctreeNode& child, int idx);
-    void subdivide(OctreeNode* parent, const Mesh& mesh, const std::vector<Face>& subMesh, int depth);
+    void subdivide(const Mesh& mesh);
     std::vector<int> amountOfNodsePrunedDepthN() const;
 };
 

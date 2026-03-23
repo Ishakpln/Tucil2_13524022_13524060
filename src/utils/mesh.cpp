@@ -3,10 +3,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cmath>
-#include <map>
-#include <string>
-
 
 Face::Face() {}
 
@@ -153,36 +149,37 @@ AABB computeAABB(const vector<Vertex>& vertices) {
 
 constexpr float EPSILON = 1e-6f;
 
-bool triangleBoxOverlapTest(AABB box, vector<Vertex> triangle) {
-    assert(triangle.size() == 3 && "Vector of vertices has length not 3(not triangle)");
+bool triangleBoxOverlapTest(AABB box, Vertex v0, Vertex v1, Vertex v2) {
 
     Vector3 centerBox = box.center();
-    for (Vertex& v : triangle) {
-        v.positions -= centerBox;
-    }
+
+    v0.positions -= centerBox;
+    v1.positions -= centerBox;
+    v2.positions -= centerBox;
+
     box.minBound -= centerBox;
     box.maxBound -= centerBox;
 
-    AABB triangleBB{computeAABB(triangle)};
+    AABB triangleBB{computeAABB({v0, v1, v2})};
     if (!box.aabbCollisionDetection(triangleBB)) {
         return false;
     }
 
-    Vector3 f0{triangle[1].positions - triangle[0].positions};
-    Vector3 f1{triangle[2].positions - triangle[1].positions};
-    Vector3 f2{triangle[0].positions - triangle[2].positions};
+    Vector3 f0{v1.positions - v0.positions};
+    Vector3 f1{v2.positions - v1.positions};
+    Vector3 f2{v0.positions - v2.positions};
     Vector3 n = cross(f0, f1);
 
     float r = box.maxBound.x * std::abs(n.x) + box.maxBound.y * std::abs(n.y) + box.maxBound.z * std::abs(n.z);
-    float s = dot(n, triangle[0].positions);
+    float s = dot(n, v0.positions);
     if (!(std::abs(s) <= r + EPSILON)) {
         return false;
     }
 
     auto isSeparatedOnAxis = [&](const Vector3& axis) {
-        float p0 = dot(axis, triangle[0].positions);
-        float p1 = dot(axis, triangle[1].positions);
-        float p2 = dot(axis, triangle[2].positions);
+        float p0 = dot(axis, v0.positions);
+        float p1 = dot(axis, v1.positions);
+        float p2 = dot(axis, v2.positions);
         float pMin = std::min({p0, p1, p2});
         float pMax = std::max({p0, p1, p2});
 

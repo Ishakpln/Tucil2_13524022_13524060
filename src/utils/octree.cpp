@@ -1,9 +1,7 @@
 #include "mesh.hpp"
 #include "octree.hpp"
-#include <iostream>
-#include <cassert>
 
-namespace {
+constexpr size_t minFacesConcurrencyCutoff = 128;
 
 unsigned long long binPositivePow(unsigned long long base, int exponent) {
     unsigned long long result = 1;
@@ -15,8 +13,6 @@ unsigned long long binPositivePow(unsigned long long base, int exponent) {
         exponent >>= 1;
     }
     return result;
-}
-
 }
 
 Octree::Octree() : root(nullptr), maxDepth(0) {}
@@ -86,30 +82,59 @@ std::vector<int> Octree::amountOfNodsePrunedDepthN() const {
     return prunedCountDepth;
 }
 
-void Octree::subdivide(OctreeNode* parent, const Mesh& mesh, const std::vector<Face>& subMesh, int depth) {
-    if (parent == nullptr || depth >= maxDepth) {
+void Octree::subdivide(const Mesh& mesh) {
+    if (mesh.getFaces().empty()) {
+        root->isFilled = false;
         return;
     }
 
-    std::vector<Face> currentFaces = filterTrianglesInBox(mesh, subMesh, parent->cube);
-    if (currentFaces.empty()) {
-        parent->isFilled = false;
+    root->isFilled = true;
+
+    subdivide_recurse(*root, mesh, mesh.getFaces(), 0);
+}
+
+void Octree::subdivide_recurse(OctreeNode& parent, const Mesh& mesh, const std::vector<Face>& subMesh, int depth){
+    if(depth >= maxDepth){
+        return;
+    }
+    
+    if(subMesh.empty()){
+        parent.isFilled = false;
         return;
     }
 
-    parent->isFilled = true;
+    std::vector<AABB> childCubes;
+    for(int i = 0; i < 8; i++){
+        childCubes.push_back(computeChildCube(parent, i));
+    }
 
-    for (int i = 0; i < 8; i++) {
-        AABB childCube = computeChildCube(*parent, i);
-        std::vector<Face> subFaces = filterTrianglesInBox(mesh, currentFaces, childCube);
-        if (!subFaces.empty()) {
-            OctreeNode* childNode = createNode(childCube);
-            childNode->isFilled = true;
-            addChild(parent, *childNode, i);
-            subdivide(childNode, mesh, subFaces, depth + 1);
+    std::vector<std::vector<Face>> childSubMeshes(8);
+
+    if(subMesh.size() > minFacesConcurrencyCutoff){
+        std::vector<jthread> workers;
+        {
+            for(int i = 0; i < 8; i++){
+                workers.emplace_back([i, &childSubMeshes, &mesh, &subMesh, &childCubes]()
+                    {childSubMeshes[i] = filterTrianglesInBox(mesh, subMesh, childCubes[i]);}
+                );
+            }
+        }
+    }else{
+        for(int i = 0; i < 8; i++){
+            childSubMeshes[i] = filterTrianglesInBox(mesh, subMesh, childCubes[i]);
         }
     }
+
+        for (int i = 0; i < 8; i++) {
+            if(!childSubMeshes[i].empty()){
+                OctreeNode* childNode = createNode(childCubes[i]);
+                childNode->isFilled = true;
+                addChild(&parent, *childNode, i);
+                subdivide_recurse(*childNode, mesh, childSubMeshes[i], depth + 1);
+            }
+        }
 }
+
 
 AABB computeChildCube(const OctreeNode& parent, int idx) {
     const Vector3& minBound = parent.cube.minBound;
@@ -143,16 +168,9 @@ std::vector<Face> filterTrianglesInBox(const Mesh& mesh, const std::vector<Face>
 
     const std::vector<Vertex>& vertices = mesh.getVertices();
     for (const Face& face : subMesh) {
-        std::vector<Vertex> polygon;
         const std::vector<int>& indices = face.getVertexIndices();
-        polygon.reserve(indices.size());
 
-        for (int vertexIndex : indices) {
-            polygon.push_back(vertices[vertexIndex]);
-        }
-
-        assert(polygon.size() == 3 && "Jgn dihilangin, untuk skrg triangle dulu inputnya biar gampang debug");
-        if (triangleBoxOverlapTest(boundingCube, polygon)) {
+        if (triangleBoxOverlapTest(boundingCube, vertices[indices[0]], vertices[indices[1]], vertices[indices[2]])) {
             filteredFaces.push_back(face);
         }
     }
