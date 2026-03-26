@@ -217,12 +217,18 @@ static void recurseMeshing(Mesh& mesh, const OctreeNode& node) {
         mesh.addVertex({Vector3{node.cube.minBound.x, node.cube.maxBound.y, node.cube.maxBound.z}});
         mesh.addVertex({node.cube.maxBound});
 
-        mesh.addFace(Face({idx + 0, idx + 1, idx + 3, idx + 2}));
-        mesh.addFace(Face({idx + 1, idx + 0, idx + 4, idx + 5}));
-        mesh.addFace(Face({idx + 3, idx + 1, idx + 5, idx + 7}));
-        mesh.addFace(Face({idx + 2, idx + 3, idx + 7, idx + 6}));
-        mesh.addFace(Face({idx + 0, idx + 2, idx + 6, idx + 4}));
-        mesh.addFace(Face({idx + 5, idx + 4, idx + 6, idx + 7}));
+        mesh.addFace(Face({idx + 0, idx + 1, idx + 3}));
+        mesh.addFace(Face({idx + 0, idx + 3, idx + 2}));
+        mesh.addFace(Face({idx + 1, idx + 0, idx + 4}));
+        mesh.addFace(Face({idx + 1, idx + 4, idx + 5}));
+        mesh.addFace(Face({idx + 3, idx + 1, idx + 5}));
+        mesh.addFace(Face({idx + 3, idx + 5, idx + 7}));
+        mesh.addFace(Face({idx + 2, idx + 3, idx + 7}));
+        mesh.addFace(Face({idx + 2, idx + 7, idx + 6}));
+        mesh.addFace(Face({idx + 0, idx + 2, idx + 6}));
+        mesh.addFace(Face({idx + 0, idx + 6, idx + 4}));
+        mesh.addFace(Face({idx + 5, idx + 4, idx + 6}));
+        mesh.addFace(Face({idx + 5, idx + 6, idx + 7}));
     } else {
         for (auto child : node.children) {
             recurseMeshing(mesh, *child.second);
