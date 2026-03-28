@@ -50,6 +50,10 @@ bool isValidMeshForOutput(const Mesh& mesh) {
 
 }
 
+string MeshOutput::buildOutputPath(const string& filename) {
+    return "test/" + buildOutputFilename(filename);
+}
+
 bool MeshOutput::saveOBJ(const Mesh& mesh, const string& filename) {
     if (!isValidMeshForOutput(mesh)) {
         cerr << "NOT VALID\n";
@@ -58,7 +62,7 @@ bool MeshOutput::saveOBJ(const Mesh& mesh, const string& filename) {
 
     const vector<Vertex>& vertices = mesh.getVertices();
     const vector<Face>& faces = mesh.getFaces();
-    const string outputPath = "test/" + buildOutputFilename(filename);
+    const string outputPath = buildOutputPath(filename);
 
     ofstream file(outputPath);
     if (!file.is_open()) {

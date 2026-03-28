@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 
 Face::Face() {}
 
@@ -170,9 +171,9 @@ bool triangleBoxOverlapTest(AABB box, Vertex v0, Vertex v1, Vertex v2) {
     Vector3 f2{v0.positions - v2.positions};
     Vector3 n = cross(f0, f1);
 
-    float r = box.maxBound.x * std::abs(n.x) + box.maxBound.y * std::abs(n.y) + box.maxBound.z * std::abs(n.z);
+    float r = box.maxBound.x * std::fabs(n.x) + box.maxBound.y * std::fabs(n.y) + box.maxBound.z * std::fabs(n.z);
     float s = dot(n, v0.positions);
-    if (!(std::abs(s) <= r + EPSILON)) {
+    if (!(std::fabs(s) <= r + EPSILON)) {
         return false;
     }
 
@@ -183,9 +184,9 @@ bool triangleBoxOverlapTest(AABB box, Vertex v0, Vertex v1, Vertex v2) {
         float pMin = std::min({p0, p1, p2});
         float pMax = std::max({p0, p1, p2});
 
-        float axisRadius = box.maxBound.x * std::abs(axis.x)
-                         + box.maxBound.y * std::abs(axis.y)
-                         + box.maxBound.z * std::abs(axis.z);
+        float axisRadius = box.maxBound.x * std::fabs(axis.x)
+                         + box.maxBound.y * std::fabs(axis.y)
+                         + box.maxBound.z * std::fabs(axis.z);
 
         return (pMin > axisRadius + EPSILON) || (pMax < -axisRadius - EPSILON);
     };

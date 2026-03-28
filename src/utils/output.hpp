@@ -9,6 +9,7 @@ using namespace std;
 
 class MeshOutput {
 public:
+    static string buildOutputPath(const string& filename);
     static bool saveOBJ(const Mesh& mesh, const string& filename);
 };
 
