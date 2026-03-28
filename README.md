@@ -26,11 +26,9 @@
 
 ## Kompilasi
 
-- Windows MSVC:
-  cl /std:c++20 /EHsc /I src src\main.cpp src\utils\geometry.cpp src\utils\loader.cpp src\utils\mesh.cpp src\utils\octree.cpp src\utils\output.cpp /Fe:bin\voxelizator.exe
-
-- GCC atau Clang:
-  g++ -std=c++20 -O2 -pthread -I src src/main.cpp src/utils/geometry.cpp src/utils/loader.cpp src/utils/mesh.cpp src/utils/octree.cpp src/utils/output.cpp -o bin/voxelizator
+```
+make run
+```
 
 ## Menjalankan Program
 
