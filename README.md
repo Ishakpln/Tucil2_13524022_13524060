@@ -21,8 +21,8 @@
 
 ## Kebutuhan
 
-- C++20
-- Compiler yang mendukung std::jthread
+- C++20 Compiler (GCC 10+ or Clang 12+)
+- GNU Make
 
 ## Kompilasi
 
