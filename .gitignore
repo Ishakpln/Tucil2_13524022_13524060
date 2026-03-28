@@ -1,0 +1,41 @@
+# Build artifacts
+/build/
+/bin/
+
+# Object & dependency files
+*.o
+*.obj
+*.d
+*.lo
+
+# Binaries / libraries
+*.exe
+*.dll
+*.so
+*.dylib
+*.lib
+*.a
+
+# IDE / editor
+.vscode/
+.idea/
+*.suo
+*.user
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs and temporary
+*.log
+debug_output.txt
+
+# CMake (if ever used)
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile.cmake
+test/
+.vscode
